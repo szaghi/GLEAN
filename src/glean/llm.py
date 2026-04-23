@@ -45,20 +45,25 @@ log = logging.getLogger(__name__)
 # =============================================================================
 
 
-def load_prompt(name: str) -> Template:
-    """Load a prompt template by name from `src/glean/prompts/<name>.txt`.
+def load_prompt(name: str, *, suffix: str = "txt") -> Template:
+    """Load a prompt template by name from `src/glean/prompts/<name>.<suffix>`.
 
-    Returns a `string.Template` ready for `.substitute(...)` with the template's
-    placeholders. Using string.Template (not .format()) avoids collisions with
-    YAML's `{` characters that appear verbatim in AGENTS.md and other context
-    we feed to the LLM.
+    Default suffix is `.txt` for LLM prompts; callers may pass `suffix="md"` for
+    markdown templates (e.g. `output_summary_template.md`). Returns a
+    `string.Template` ready for `.substitute(...)` with the template's placeholders.
+
+    Using string.Template (not .format()) avoids collisions with YAML's `{`
+    characters that appear verbatim in AGENTS.md and other context we feed to
+    the LLM.
     """
     if "/" in name or name.startswith("."):
         raise GleanLLMError(f"invalid prompt name: {name!r}")
+    if not suffix.isalnum():
+        raise GleanLLMError(f"invalid suffix: {suffix!r}")
     try:
-        raw = (files("glean.prompts") / f"{name}.txt").read_text(encoding="utf-8")
+        raw = (files("glean.prompts") / f"{name}.{suffix}").read_text(encoding="utf-8")
     except FileNotFoundError as e:
-        raise GleanLLMError(f"prompt template not found: {name}") from e
+        raise GleanLLMError(f"prompt template not found: {name}.{suffix}") from e
     return Template(raw)
 
 

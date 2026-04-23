@@ -85,4 +85,4 @@ where = ["src"]
 include = ["glean*"]
 
 [tool.setuptools.package-data]
-"glean.prompts" = ["*.txt"]
+"glean.prompts" = ["*.txt", "*.md"]
