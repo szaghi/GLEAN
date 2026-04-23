@@ -305,6 +305,7 @@ class OllamaBackend:
         *,
         tier: ModelTier = ModelTier.DEEP,
         timeout_seconds: float = 300.0,
+        num_ctx: int = 16384,
     ) -> tuple[str, LLMCallLog]:
         if not prompt.strip():
             raise GleanLLMError("prompt must not be empty or whitespace-only")
@@ -316,6 +317,12 @@ class OllamaBackend:
             "options": {
                 # Deterministic-ish: low temperature for schema work.
                 "temperature": 0.2,
+                # Constrain context window so large models fit entirely in VRAM
+                # on consumer hardware (24 GB class). Ollama's default is 32K,
+                # which pushes 27B-Q4 models to CPU/GPU split. 16K is ample for
+                # GLEAN's prompts (<8K input, <4K output typical) and keeps
+                # inference pure-GPU where possible.
+                "num_ctx": num_ctx,
             },
         }
         started_at = datetime.now().astimezone()

@@ -12,11 +12,18 @@ Follow the schema defined in AGENTS.md exactly. Prefer fewer, higher-quality
 claims over many trivial ones. Target 5-30 claims per source depending on
 density; a typical paper yields 15-20, a simulation 5-8, a notebook 3-6.
 
+**Important — ID convention.** Do NOT emit an `id:` field. Instead, emit a
+short `slug:` field (3-6 words, lowercase, underscore-separated) that
+captures the topic of the claim. GLEAN will construct the final claim ID
+deterministically from the source context and your slug. Good slugs:
+`amr_update_cost_dominates_at_fine_resolution`, `roe_flux_preferred_for_high_mach`.
+Bad slugs: full claim IDs, sentences, single words, hyphenated-with-dashes.
+
 Output format: a sequence of YAML frontmatter blocks, each separated by a line
 containing only `---`. No prose outside the blocks. Example shape for one claim:
 
 ---
-id: claim_$year_$source_slug_short_slug_here
+slug: short_topic_slug_here
 source: $source_id
 source_span: "§3.2, para 2"
 quote: |
