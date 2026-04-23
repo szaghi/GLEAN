@@ -101,9 +101,38 @@ def ingest(
 
 
 @app.command()
-def lint() -> None:
-    """Health-check the wiki: uncited sentences, orphan claims, broken links, contradictions."""
-    raise NotImplementedError("lint: to be implemented in M4 (see docs/PLAN.md)")
+def lint(
+    repo: Path = typer.Option(Path(), "--repo", "-r", help="Path to the rossum repo (default: current directory)."),
+    strict: bool = typer.Option(False, "--strict", help="Exit nonzero on warnings too, not only errors."),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit structured JSON output instead of human-readable stream."
+    ),
+    only: list[str] = typer.Option(
+        [],
+        "--only",
+        help="Run only the named check(s). Repeatable. Default: all checks.",
+    ),
+) -> None:
+    """Health-check the wiki: citations, orphans, contradictions, and more (15 checks)."""
+    from glean.errors import GleanError
+    from glean.lint import format_human, format_json, run_lint
+    from glean.repo import NotesRepo
+
+    try:
+        notes_repo = NotesRepo(repo)
+    except GleanError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from None
+
+    only_set: set[str] | None = set(only) if only else None
+    report = run_lint(notes_repo, only=only_set)
+
+    typer.echo(format_json(report) if json_output else format_human(report))
+
+    if report.errors():
+        raise typer.Exit(1)
+    if strict and report.warnings():
+        raise typer.Exit(1)
 
 
 @app.command()
