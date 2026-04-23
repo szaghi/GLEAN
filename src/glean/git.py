@@ -154,6 +154,23 @@ def add(repo_path: Path, paths: list[str]) -> None:
     _run(("add", "--", *paths), cwd=repo_path)
 
 
+def is_tracked(repo_path: Path, path: str) -> bool:
+    """Return True if `path` (relative to repo_path) is tracked by git.
+
+    Uses `git ls-files --error-unmatch`, which exits non-zero if the path is
+    not tracked. Distinguishes "file exists on disk but not committed" (False)
+    from "file is committed to HEAD" (True).
+    """
+    result = _run(("ls-files", "--error-unmatch", path), cwd=repo_path, check=False)
+    return result.returncode == 0
+
+
+def any_tracked_under(repo_path: Path, dir_path: str) -> bool:
+    """Return True if any file under `dir_path` (relative) is tracked by git."""
+    result = _run(("ls-files", dir_path), cwd=repo_path, check=False)
+    return result.returncode == 0 and result.stdout.strip() != ""
+
+
 def commit(repo_path: Path, message: str) -> str:
     """Create a commit with the given message. Returns the new commit SHA.
 
