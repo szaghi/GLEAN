@@ -29,6 +29,19 @@ class SourceType(StrEnum):
     NOTEBOOK = "notebook"
 
 
+class SourceConfidence(StrEnum):
+    """Source-level confidence per AGENTS.md v0.2 §2.1.
+
+    This is Stefano's trust in the source itself, distinct from `Confidence`
+    (which is claim-level and records how the source itself frames each
+    assertion). A high-confidence source can still host speculative claims.
+    """
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class Confidence(StrEnum):
     """Claim confidence values per AGENTS.md v0.2 §2.5.
 
