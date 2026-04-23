@@ -11,8 +11,11 @@ Implementation strategy:
     - `SourceManifest` is a discriminated union on `type:`, the entry point
       for parsing a `source.yaml` file of unknown type.
 
-M1b scope: Paper, Simulation, Repository only — the three types Phase 1
-exercised. Other types land in M1c.
+M1b scope: Paper, Simulation, Repository — the three types Phase 1 exercised.
+M1c-minimal scope: adds WebArticle (likely next Phase-2 type) and Notebook
+(exercised in Phase 1 but with deliberate asymmetry from SourceCommon).
+Remaining types (Preprint, Dataset, Talk, Book, Standard, PersonalComm) are
+deferred until Phase 2 surfaces concrete need.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from glean.enums import SourceConfidence, SourceType
+from glean.enums import NotebookStatus, SourceConfidence, SourceType
 from glean.ids import is_valid_source_id
 
 _HASH_RE = re.compile(r"[a-f0-9]{7,40}")
@@ -164,13 +167,87 @@ class RepositorySource(SourceCommon):
         return self
 
 
+class WebArticleSource(SourceCommon):
+    """A web article or blog post as a source.
+
+    Per AGENTS.md v0.2 §2.2: `url`, `archived_at` required; `archived_snapshot_path`
+    optional. The snapshot path, when present, points at a local archive file
+    (HTML or markdown) inside the source directory — insurance against link rot.
+    """
+
+    type: Literal[SourceType.WEB_ARTICLE] = SourceType.WEB_ARTICLE
+    archived_at: date
+    archived_snapshot_path: str | None = None
+
+    @model_validator(mode="after")
+    def _url_required_for_web_article(self) -> WebArticleSource:
+        if not self.url:
+            raise ValueError("web_article source requires a 'url' field")
+        return self
+
+
+class NotebookSource(BaseModel):
+    """A Stefano-authored notebook entry.
+
+    **Asymmetry from SourceCommon is deliberate.** Notebook entries live in
+    `notebook/`, not `sources/`, and their frontmatter shape is defined by
+    AGENTS.md v0.2 §2.4, not §2.1. Common fields like `title`, `authors`,
+    `venue`, `added`, `confidence` do not apply — the entry IS authored by
+    Stefano, the date IS the added-date, and source-level confidence is
+    meaningless when every extracted claim gets `author_hypothesis` or
+    `author_reasoning` per §2.5.
+
+    Notebook entries are therefore a peer shape to SourceCommon-descended
+    sources, dispatched into SourceManifest by the same `type:` discriminator.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        validate_default=True,
+    )
+
+    id: str
+    type: Literal[SourceType.NOTEBOOK] = SourceType.NOTEBOOK
+    date: date
+    topic: str
+    status: NotebookStatus = NotebookStatus.DRAFT
+    superseded_by: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("id")
+    @classmethod
+    def _id_must_be_notebook_form(cls, v: str) -> str:
+        if not is_valid_source_id(v, SourceType.NOTEBOOK):
+            raise ValueError(f"notebook id {v!r} must match pattern note_YYYY_MM_DD_<slug>")
+        return v
+
+    @field_validator("superseded_by")
+    @classmethod
+    def _superseded_by_must_be_notebook_id(cls, v: str | None) -> str | None:
+        if v is not None and not is_valid_source_id(v, SourceType.NOTEBOOK):
+            raise ValueError(f"superseded_by {v!r} must be a valid notebook source ID")
+        return v
+
+    @model_validator(mode="after")
+    def _superseded_status_requires_superseded_by(self) -> NotebookSource:
+        if self.status == NotebookStatus.SUPERSEDED and not self.superseded_by:
+            raise ValueError("notebook with status=superseded must name the successor in 'superseded_by'")
+        if self.status != NotebookStatus.SUPERSEDED and self.superseded_by:
+            raise ValueError("'superseded_by' is only valid when status=superseded")
+        return self
+
+
 # Discriminated union entry point. When parsing a `source.yaml` of unknown type,
 # use `SourceManifest`:
 #
 #     SourceManifest.validate_python(yaml_dict)
 #
 # Pydantic will dispatch to the concrete class based on the `type:` field.
+# Note: NotebookSource is included here even though notebook frontmatter lives in
+# a different file location (notebook/<id>.md, not sources/<id>/source.yaml);
+# the discriminated union is purely on the `type:` field semantics.
 SourceManifest = Annotated[
-    PaperSource | SimulationSource | RepositorySource,
+    PaperSource | SimulationSource | RepositorySource | WebArticleSource | NotebookSource,
     Field(discriminator="type"),
 ]
