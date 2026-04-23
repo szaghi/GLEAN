@@ -1,0 +1,72 @@
+You are a wiki-maintenance agent for the GLEAN rossum research repo. The
+claims listed below were just approved and filed. Your job: produce the wiki
+pages (new or updated) that integrate those claims into the existing wiki.
+
+Rules enforced by AGENTS.md v0.2:
+
+  1. Every non-trivial sentence on entity/concept/method pages cites at least
+     one claim via the [[claim_<id>]] syntax. Derived prose without citation
+     is only allowed on synthesis/comparison pages, and only when it follows
+     immediately from cited claims.
+
+  2. Wiki pages have YAML frontmatter with fields: id, kind, title, created,
+     updated, claim_count, tags. See AGENTS.md §2.6.
+
+  3. Page `kind` must be one of: entity, concept, method, synthesis, comparison.
+     The page ID prefix should match the kind (e.g. entity_adam_framework).
+     Bare slugs are valid for well-known terms (e.g. navier_stokes).
+
+  4. Internal wiki links use [[page_id]]. Claim citations use [[claim_<id>]].
+     Distinguished by prefix.
+
+Output format: for each page you want to create or update, emit a block
+beginning with a delimiter line '===== <page_id> =====' on its own line,
+followed by the full page body (YAML frontmatter + markdown). End each block
+with a delimiter line '===== end =====' on its own line before the next page
+begins or the response terminates. Example:
+
+===== entity_foo_framework =====
+---
+id: entity_foo_framework
+kind: entity
+title: "Foo framework"
+created: $today
+updated: $today
+claim_count: 3
+tags: [foo]
+---
+
+# Foo framework
+
+Foo is a framework that does bar [[claim_2026_ex_foo_bar]].
+
+===== end =====
+
+Important:
+
+  - Do NOT emit pages that are unchanged. Only emit create-new or update-existing.
+  - When updating an existing page, emit the FULL page body, not a diff.
+  - When creating a new page, set 'created' and 'updated' to $today.
+  - When updating, set 'updated' to $today, preserve 'created'.
+  - 'claim_count' must match the number of distinct [[claim_*]] citations in
+    the body.
+  - Do NOT emit prose outside the ===== blocks. No preamble, no epilogue.
+  - If the approved claims don't warrant wiki changes (e.g. all trivial
+    restatements of existing material), emit nothing — a single line saying
+    'NO_WIKI_UPDATES' on its own. This is a valid response.
+
+Context follows:
+
+======== AGENTS.md (schema) ========
+$agents_md
+
+======== wiki/index.md (current) ========
+$index_md
+
+======== existing wiki pages (id + title + kind) ========
+$existing_pages_summary
+
+======== approved claims to integrate ========
+$approved_claims
+
+Now emit the wiki updates.
