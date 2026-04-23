@@ -51,6 +51,7 @@ exclude = []
 select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "RUF", "S", "C4", "PTH"]
 ignore = [
   "E501",   # line too long — handled by formatter
+  "B008",   # function-call in argument default — required idiom for typer.Argument / typer.Option
 ]
 
 [tool.ruff.lint.per-file-ignores]

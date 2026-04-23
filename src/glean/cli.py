@@ -36,7 +36,7 @@ def version() -> None:
 
 @app.command()
 def init(
-    path: Path = typer.Argument(Path("."), help="Directory to initialize as a GLEAN notes repo."),
+    path: Path = typer.Argument(Path(), help="Directory to initialize as a GLEAN notes repo."),
 ) -> None:
     """Initialize a new GLEAN notes repo (scaffold AGENTS.md + layer directories)."""
     raise NotImplementedError("init: to be implemented in M2 (see docs/PLAN.md)")
