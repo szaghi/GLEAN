@@ -139,9 +139,27 @@ def lint(
 def query(
     question: str = typer.Argument(..., help="Natural-language question."),
     cloud: bool = typer.Option(False, "--cloud", help="Use cloud LLM for synthesis."),
+    repo: Path = typer.Option(Path(), "--repo", "-r", help="Path to the rossum repo (default: current directory)."),
 ) -> None:
     """Ask a question against the wiki; answers cite claims."""
-    raise NotImplementedError("query: to be implemented in M5 (see docs/PLAN.md)")
+    from glean.config import load_config
+    from glean.errors import GleanError
+    from glean.llm import get_backend
+    from glean.query import run_cli_query
+    from glean.repo import NotesRepo
+
+    try:
+        notes_repo = NotesRepo(repo)
+    except GleanError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from None
+
+    config = load_config()
+    backend = get_backend(config, cloud=cloud)
+
+    exit_code = run_cli_query(question, repo=notes_repo, backend=backend)
+    if exit_code != 0:
+        raise typer.Exit(exit_code)
 
 
 if __name__ == "__main__":
